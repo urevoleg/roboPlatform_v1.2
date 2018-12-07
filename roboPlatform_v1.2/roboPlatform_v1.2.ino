@@ -91,8 +91,8 @@ byte setDistance = 10;                      // переменная для на�
 byte setMotorSpeed = 50;                    // переменная для настройки мощности мотора 0-100% - регулируется из меню робота
 byte startValuePwmMotor = 50;               // начальная мощность моторов для П-регулятора
 float koefProp = 0.15;                      // коэффициент пропорциональности для П-регулятора
-float koefDif = 9.1;                        // дифференциальный коэффициент ПИД-регулятора
-float koefInteg = 1.1;                      // интегральный коэффициент ПИД-регулятора
+float koefDif = 1.2;                        // дифференциальный коэффициент ПИД-регулятора
+float koefInteg = 1.0;                      // интегральный коэффициент ПИД-регулятора
 float koef[3] = {koefProp, koefDif, koefInteg};
 String koefNames[3] = {"kp", "kd", "ki"};
 byte sizeOfKoef = sizeof(koef) / sizeof(float) - 1;
@@ -235,7 +235,7 @@ void loop() {
   while (1) {
     //------------------ проверка нажатий кнопки --------------------
     unsigned long butCountTimer = millis() - startButPressTimer;
-    if (butCountTimer > 750 and shortButCount != 0) {
+    if (butCountTimer > 650 and shortButCount != 0) {
       switch (shortButCount) {
         case 1:
           butIsSingle = true;
@@ -612,7 +612,7 @@ void loop() {
         lcdDrawFlag = true;
         goto END_SINGLE;
       }
-      
+
 END_SINGLE:
       butIsSingle = false;
     }
@@ -664,9 +664,9 @@ END_DOUBLE:
         line1RobotCub();
       }
 
-      /*if (pidLine1MenuFlag) {
+      if (pidLine1MenuFlag) {
         line1RobotPID();
-        }*/
+        }
 
       if (line2MenuFlag) {
         line2Robot();
@@ -970,6 +970,7 @@ void autoModeLineSensor() {
   delay(2000);
   // вычисляем пропорциональный коэффициент для П - регулятора
   koefProp = 2.0 * (100 - startValuePwmMotor) / (blackValue - whiteValue);
+  koef[0] = koefProp;
   lcd.setCursor(0, 1);
   lcd.print("                ");
   lcd.setCursor(1, 1);
@@ -1360,6 +1361,9 @@ void pidLine1Menu() {
   lcd.clear();
   lcd.setCursor(1, 0);
   lcd.print(line1MenuItems[line1MenuCounter]);
+  koef[0] = koefProp;
+  koef[1] = koefDif;
+  koef[2] = koefInteg;
   for (int i = 0; i <= sizeOfKoef; i++) {
     lcd.setCursor(4 * i + 5, 0);
     lcd.print(koefNames[i]);
