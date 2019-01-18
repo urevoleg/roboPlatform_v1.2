@@ -14,7 +14,7 @@
 #include <NewPing.h>
 #define TRIGGER_PIN  10  // Arduino pin tied to trigger pin on the ultrasonic sensor.
 #define ECHO_PIN     11  // Arduino pin tied to echo pin on the ultrasonic sensor.
-#define MAX_DISTANCE 20 // Maximum distance we want to ping for (in centimeters). Maximum sensor distance is rated at 400-500cm.
+#define MAX_DISTANCE 500 // Maximum distance we want to ping for (in centimeters). Maximum sensor distance is rated at 400-500cm.
 
 NewPing sonar(TRIGGER_PIN, ECHO_PIN, MAX_DISTANCE); // NewPing setup of pins and maximum distance.
 // sonar.ping_cm() - Send ping, get distance in cm and print result (0 = outside set distance range)
@@ -219,7 +219,7 @@ void setup() {
   lcd.setCursor(2, 0);
   lcd.print("roboPlatform");
   lcd.setCursor(10, 1);
-  lcd.print("v1.1");
+  lcd.print("v1.2");
   attachInterrupt(0, butLeftRead, FALLING);
   attachInterrupt(1, butRightRead, FALLING);
   attachPCINT(digitalPinToPCINT(butCentrePin), butCentreRead, CHANGE);
@@ -653,7 +653,7 @@ END_DOUBLE:
       }
 
       if (forwardMenuFlag) {
-        forwardRobot();
+        forwardRobot(true);
       }
 
       if (relayLine1MenuFlag) {
@@ -666,7 +666,7 @@ END_DOUBLE:
 
       if (pidLine1MenuFlag) {
         line1RobotPID();
-        }
+      }
 
       if (line2MenuFlag) {
         line2Robot();
@@ -1027,14 +1027,29 @@ void circleTurnRobot() {
 }
 
 // робот "Движение вперед по времени"
-void forwardRobot() {
-  while (millis() - startForwardRobot < setForwardSec * 1000) {
+void forwardRobot(bool state) {
+  if (state) {
+    while (millis() - startForwardRobot < setForwardSec * 1000) {
+      digitalWrite(leftMotorDirPin, HIGH);
+      analogWrite(leftMotorPwmPin, map(setMotorSpeed, 0, 100, 0, 255));
+      digitalWrite(rightMotorDirPin, HIGH);
+      analogWrite(rightMotorPwmPin, map(setMotorSpeed, 0, 100, 0, 255));
+    }
+    butIsLong = true;
+  } else {
     digitalWrite(leftMotorDirPin, HIGH);
     analogWrite(leftMotorPwmPin, map(setMotorSpeed, 0, 100, 0, 255));
     digitalWrite(rightMotorDirPin, HIGH);
     analogWrite(rightMotorPwmPin, map(setMotorSpeed, 0, 100, 0, 255));
   }
-  butIsLong = true;
+}
+
+// Стоп
+void stopRobot() {
+  digitalWrite(leftMotorDirPin, HIGH);
+  analogWrite(leftMotorPwmPin, 0);
+  digitalWrite(rightMotorDirPin, HIGH);
+  analogWrite(rightMotorPwmPin, 0);
 }
 
 // робот "Линия с 1 датчиком - ПИД-регулятор"
@@ -1218,6 +1233,7 @@ void line2Robot() {
 
 // робот "Линия с 3 датчиками"
 void line3Robot() {
+  delay(delayBetweenActionLineSensor);
   lastActionMillis = millis();
   int sampleLeft = analogRead(0);
   int sampleLeftFiltered = leftFilter.filterAVG(sampleLeft);
@@ -1294,7 +1310,13 @@ void line3Robot() {
 
 // робот "Объезд препятствий"
 void wallRobot() {
-
+  int dist = sonar.ping_cm();
+  while(dist < setDistance)
+    circleTurnRobot();
+    dist = sonar.ping_cm();
+  }
+  forwardRobot(false);
+  //delay(delayBetweenActionLineSensor);
 }
 
 // робот "Робот с управлением по Bluetooth"
